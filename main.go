@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"recon-bot/recon"
 	"regexp"
 )
 
@@ -52,4 +53,7 @@ func main() {
 	fmt.Println("#      Herramienta de Reconocimiento    #")
 	fmt.Println("#########################################")
 	fmt.Printf("[+] Iniciando reconocimiento en: %s\n", *domain)
+
+	// Obtener información de DNS
+	recon.GetDNSInfo(*domain)
 }
