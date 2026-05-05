@@ -68,4 +68,10 @@ func main() {
 	} else {
 		fmt.Println("[-] No se encontraron IPs para escanear puertos.")
 	}
+
+	// 3. Extraer cabeceras HTTP
+	recon.GetHTTPHeaders(*domain)
+
+	// 4. Buscar Subdominios
+	recon.GetSubdomains(*domain)
 }
