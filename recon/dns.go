@@ -5,29 +5,30 @@ import (
 	"net"
 )
 
-// GetDNSInfo busca y muestra información básica de DNS para un dominio dado.
-func GetDNSInfo(domain string) {
+// GetDNSInfo ahora retorna las IPs encontradas para que otros módulos las usen
+func GetDNSInfo(domain string) ([]string, error) {
 	fmt.Printf("\n[*] Extrayendo información de DNS para: %s\n", domain)
 
-	// Buscar direcciones IP
 	ips, err := net.LookupIP(domain)
 	if err != nil {
-		fmt.Printf("[-] Error al buscar IPs: %v\n", err)
-	} else {
-		fmt.Println("[+] Direcciones IP:")
-		for _, ip := range ips {
-			fmt.Printf("\t- %s\n", ip.String())
-		}
+		return nil, fmt.Errorf("error resolviendo IP: %v", err)
 	}
 
-	// Buscar Servidores de Nombres (NS)
-	nss, err := net.LookupNS(domain)
-	if err != nil {
-		fmt.Printf("[-] Error al buscar Servidores de Nombres: %v\n", err)
-	} else {
+	var ipStrings []string
+	fmt.Println("[+] Direcciones IP:")
+	for _, ip := range ips {
+		ipStr := ip.String()
+		ipStrings = append(ipStrings, ipStr)
+		fmt.Printf("\t- %s\n", ipStr)
+	}
+
+	nsRecords, err := net.LookupNS(domain)
+	if err == nil {
 		fmt.Println("[+] Servidores de Nombres (NS):")
-		for _, ns := range nss {
+		for _, ns := range nsRecords {
 			fmt.Printf("\t- %s\n", ns.Host)
 		}
 	}
+
+	return ipStrings, nil
 }

@@ -54,6 +54,18 @@ func main() {
 	fmt.Println("#########################################")
 	fmt.Printf("[+] Iniciando reconocimiento en: %s\n", *domain)
 
-	// Obtener información de DNS
-	recon.GetDNSInfo(*domain)
+	// 1. Obtener información DNS (ahora capturamos las IPs retornadas)
+	ips, err := recon.GetDNSInfo(*domain)
+	if err != nil {
+		fmt.Printf("[-] Error al obtener DNS: %v\n", err)
+		os.Exit(1)
+	}
+
+	// 2. Escanear puertos de la primera IP encontrada
+	if len(ips) > 0 {
+		// Le pasamos solo la primera IP (ips[0]) al escáner
+		recon.ScanPorts(ips[0])
+	} else {
+		fmt.Println("[-] No se encontraron IPs para escanear puertos.")
+	}
 }
