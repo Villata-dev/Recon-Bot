@@ -4,74 +4,64 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"recon-bot/recon"
 	"regexp"
+
+	// Reemplaza "recon-bot" por el nombre exacto de tu módulo si es diferente
+	"recon-bot/recon"
 )
 
-// isValidDomain verifica que el dominio tenga un formato válido y no incluya
-// protocolos (http://), prefijos 'www.' o caracteres extraños.
+// isValidDomain verifica usando una expresión regular si el formato del dominio es correcto
 func isValidDomain(domain string) bool {
-	// Expresión regular para validar el formato de dominio:
-	// - Debe contener etiquetas de caracteres alfanuméricos o guiones separadas por puntos.
-	// - Debe terminar con un TLD de al menos 2 caracteres.
-	// - Al no incluir ':' ni '/', rechazamos automáticamente URLs con protocolo.
-	reFormat := regexp.MustCompile(`^([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$`)
-	if !reFormat.MatchString(domain) {
-		return false
-	}
-
-	// El requerimiento especifica rechazar dominios que empiecen con 'www.'
-	reWWW := regexp.MustCompile(`^www\.`)
-	if reWWW.MatchString(domain) {
-		return false
-	}
-
-	return true
+	// Expresión regular para dominios estándar (ej: google.com, sub.dominio.cl)
+	regex := regexp.MustCompile(`^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	return regex.MatchString(domain)
 }
 
 func main() {
-	// Configurar bandera -d
-	domain := flag.String("d", "", "Dominio para realizar el reconocimiento (ej: google.com)")
+	// Configuración de la bandera de consola -d
+	domainPtr := flag.String("d", "", "Dominio objetivo para realizar el reconocimiento")
 	flag.Parse()
 
-	// Validar que se haya provisto el dominio
-	if *domain == "" {
-		fmt.Println("Uso: recon-bot -d <dominio>")
+	// Validación: Si no se pasa el argumento, mostramos cómo se usa
+	if *domainPtr == "" {
+		fmt.Println("[-] Error: Debes especificar un dominio.")
+		fmt.Println("Uso: go run main.go -d <dominio.com>")
 		os.Exit(1)
 	}
 
-	// Validar el formato del dominio
-	if !isValidDomain(*domain) {
-		fmt.Printf("[-] Error: El dominio '%s' es inválido.\n", *domain)
-		fmt.Println("Asegúrate de ingresar un dominio limpio (ej: empresa.com) sin http:// o www.")
+	// Validación: Verificar que el dominio no traiga http:// o basura
+	if !isValidDomain(*domainPtr) {
+		fmt.Println("[-] Error: Formato de dominio inválido. No uses 'https://' ni 'www'.")
+		fmt.Println("Ejemplo correcto: go run main.go -d aiep.cl")
 		os.Exit(1)
 	}
 
-	// Imprimir banner y mensaje de inicio
+	// BANNER DE BIENVENIDA
 	fmt.Println("#########################################")
-	fmt.Println("#               RECON-BOT               #")
+	fmt.Println("#                RECON-BOT              #")
 	fmt.Println("#      Herramienta de Reconocimiento    #")
 	fmt.Println("#########################################")
-	fmt.Printf("[+] Iniciando reconocimiento en: %s\n", *domain)
+	fmt.Printf("[+] Iniciando reconocimiento en: %s\n", *domainPtr)
 
-	// 1. Obtener información DNS (ahora capturamos las IPs retornadas)
-	ips, err := recon.GetDNSInfo(*domain)
+	// FASE 1: Enumeración DNS Básica
+	ips, err := recon.GetDNSInfo(*domainPtr)
 	if err != nil {
-		fmt.Printf("[-] Error al obtener DNS: %v\n", err)
+		fmt.Printf("[-] Error crítico en la fase DNS: %v\n", err)
 		os.Exit(1)
 	}
 
-	// 2. Escanear puertos de la primera IP encontrada
+	// FASE 2 y 3: Geolocalización y Escaneo de Puertos (Usando la primera IP resuelta)
 	if len(ips) > 0 {
-		// Le pasamos solo la primera IP (ips[0]) al escáner
-		recon.ScanPorts(ips[0])
+		targetIP := ips[0]
+		recon.GetGeoIP(targetIP)
+		recon.ScanPorts(targetIP)
 	} else {
-		fmt.Println("[-] No se encontraron IPs para escanear puertos.")
+		fmt.Println("[-] No se encontraron IPs válidas para Geolocalización o Escaneo de Puertos.")
 	}
 
-	// 3. Extraer cabeceras HTTP
-	recon.GetHTTPHeaders(*domain)
+	// FASE 4: Banner Grabbing (Análisis de Cabeceras HTTP)
+	recon.GetHTTPHeaders(*domainPtr)
 
-	// 4. Buscar Subdominios
-	recon.GetSubdomains(*domain)
+	// FASE 5: Enumeración Pasiva de Subdominios (crt.sh)
+	recon.GetSubdomains(*domainPtr)
 }
