@@ -6,19 +6,17 @@ import (
 	"time"
 )
 
-// SaveReport guarda un resumen de los hallazgos en un archivo de texto
+// SaveReport guarda un resumen de los hallazgos en un archivo de texto plano
 func SaveReport(filename, domain string, ips []string, openPorts []int) {
 	fmt.Printf("\n[*] Guardando reporte en: %s...\n", filename)
 
-	// Creamos el archivo (si ya existe, lo sobrescribe)
 	file, err := os.Create(filename)
 	if err != nil {
 		fmt.Printf("[-] Error al crear el archivo de reporte: %v\n", err)
 		return
 	}
-	defer file.Close() // Aseguramos que el archivo se cierre al terminar
+	defer file.Close()
 
-	// Escribimos el contenido en el archivo
 	fecha := time.Now().Format("2006-01-02 15:04:05")
 	fmt.Fprintf(file, "========================================\n")
 	fmt.Fprintf(file, "REPORTE DE RECONOCIMIENTO - %s\n", domain)

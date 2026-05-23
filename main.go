@@ -6,37 +6,37 @@ import (
 	"os"
 	"regexp"
 
-	// Reemplaza "recon-bot" por el nombre exacto de tu módulo si es diferente
+	// Ajusta "recon-bot/recon" si el módulo de tu go.mod se llama diferente
 	"recon-bot/recon"
 )
 
-// isValidDomain verifica usando una expresión regular si el formato del dominio es correcto
+// isValidDomain valida que la entrada tenga estrictamente estructura de dominio
 func isValidDomain(domain string) bool {
-	// Expresión regular para dominios estándar (ej: google.com, sub.dominio.cl)
 	regex := regexp.MustCompile(`^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 	return regex.MatchString(domain)
 }
 
 func main() {
-	// Configuración de la bandera de consola -d
+	// Configuración de banderas de consola
 	domainPtr := flag.String("d", "", "Dominio objetivo para realizar el reconocimiento")
+	outPtr := flag.String("o", "", "Archivo de salida opcional para guardar el reporte (.txt)")
 	flag.Parse()
 
-	// Validación: Si no se pasa el argumento, mostramos cómo se usa
+	// Validación 1: Verificar que se ingresó un dominio
 	if *domainPtr == "" {
-		fmt.Println("[-] Error: Debes especificar un dominio.")
-		fmt.Println("Uso: go run main.go -d <dominio.com>")
+		fmt.Println("[-] Error: Debes especificar un dominio objetivo.")
+		fmt.Println("Uso: go run main.go -d <dominio.com> [-o reporte.txt]")
 		os.Exit(1)
 	}
 
-	// Validación: Verificar que el dominio no traiga http:// o basura
+	// Validación 2: Verificar el formato correcto (sin http/www)
 	if !isValidDomain(*domainPtr) {
 		fmt.Println("[-] Error: Formato de dominio inválido. No uses 'https://' ni 'www'.")
 		fmt.Println("Ejemplo correcto: go run main.go -d aiep.cl")
 		os.Exit(1)
 	}
 
-	// BANNER DE BIENVENIDA
+	// BANNER
 	fmt.Println("#########################################")
 	fmt.Println("#                RECON-BOT              #")
 	fmt.Println("#      Herramienta de Reconocimiento    #")
@@ -50,18 +50,25 @@ func main() {
 		os.Exit(1)
 	}
 
-	// FASE 2 y 3: Geolocalización y Escaneo de Puertos (Usando la primera IP resuelta)
+	// FASE 2 y 3: Geolocalización y Escaneo de Puertos Concurrente
+	var puertosAbiertos []int
 	if len(ips) > 0 {
 		targetIP := ips[0]
 		recon.GetGeoIP(targetIP)
-		recon.ScanPorts(targetIP)
+		// Ejecuta de forma concurrente y nos devuelve el slice de abiertos
+		puertosAbiertos = recon.ScanPorts(targetIP)
 	} else {
 		fmt.Println("[-] No se encontraron IPs válidas para Geolocalización o Escaneo de Puertos.")
 	}
 
-	// FASE 4: Banner Grabbing (Análisis de Cabeceras HTTP)
+	// FASE 4: Banner Grabbing (HTTP Headers)
 	recon.GetHTTPHeaders(*domainPtr)
 
-	// FASE 5: Enumeración Pasiva de Subdominios (crt.sh)
+	// FASE 5: Enumeración de Subdominios (Certificate Transparency)
 	recon.GetSubdomains(*domainPtr)
+
+	// FASE 6: Persistencia (Guardar reporte si se usó la bandera -o)
+	if *outPtr != "" {
+		recon.SaveReport(*outPtr, *domainPtr, ips, puertosAbiertos)
+	}
 }
